@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>あなたの吉方位マップ診断 2026</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root{
+    --bg:#fdf8f3; --card:#ffffff; --ink:#2d2a26; --sub:#7a7268;
+    --accent:#c9823a; --accent-dark:#9c611f; --good:#4a9d6e; --neutral:#c9b37a; --bad:#3a3a3a;
+    --line:#06c755;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:"Hiragino Sans","Noto Sans JP",sans-serif;background:var(--bg);color:var(--ink);}
+  header{padding:28px 20px 10px;text-align:center;}
+  header h1{font-size:1.5rem;margin:0 0 6px;}
+  header p{color:var(--sub);font-size:0.9rem;margin:0;}
+  .wrap{max-width:560px;margin:0 auto;padding:0 16px 60px;}
+  .card{background:var(--card);border-radius:16px;padding:20px;margin-top:16px;box-shadow:0 2px 10px rgba(0,0,0,0.06);}
+  label{display:block;font-size:0.85rem;color:var(--sub);margin:12px 0 4px;}
+  input[type=date], input[type=text]{width:100%;padding:12px;border:1px solid #e3dcd2;border-radius:10px;font-size:1rem;}
+  button{width:100%;margin-top:18px;padding:14px;border:none;border-radius:999px;background:var(--accent);color:#fff;font-size:1.05rem;font-weight:bold;cursor:pointer;}
+  button:active{background:var(--accent-dark);}
+  #result{display:none;}
+  .star-badge{display:inline-block;background:var(--accent);color:#fff;padding:6px 16px;border-radius:999px;font-weight:bold;font-size:1.1rem;margin:10px 0;}
+  #map{height:320px;border-radius:12px;margin-top:14px;}
+  .dir-table{width:100%;border-collapse:collapse;margin-top:14px;font-size:0.85rem;}
+  .dir-table th,.dir-table td{border:1px solid #eee;padding:6px 4px;text-align:center;}
+  .dir-table th{background:#faf5ee;}
+  .good{background:#e7f5ec;color:var(--good);font-weight:bold;}
+  .bad{background:#eee;color:#999;}
+  .note{font-size:0.75rem;color:var(--sub);margin-top:10px;line-height:1.6;}
+  .line-cta{display:block;text-align:center;background:var(--line);color:#fff;text-decoration:none;padding:16px;border-radius:12px;margin-top:20px;font-weight:bold;font-size:1.05rem;}
+  .line-cta span{display:block;font-size:0.8rem;font-weight:normal;margin-top:4px;opacity:0.9;}
+  .legend{display:flex;gap:14px;font-size:0.75rem;color:var(--sub);margin-top:8px;}
+  .legend span{display:inline-flex;align-items:center;gap:4px;}
+  .dot{width:10px;height:10px;border-radius:50%;display:inline-block;}
+</style>
+</head>
+<body>
+<header>
+  <h1>あなたの吉方位マップ診断</h1>
+  <p>生年月日と今いる場所から、2026年のあなたの吉方位を地図でチェック</p>
+</header>
+
+<div class="wrap">
+  <div class="card">
+    <label for="birth">生年月日</label>
+    <input type="date" id="birth" value="1990-01-01">
+
+    <label for="addr">今住んでいる場所(市区町村でOK)</label>
+    <input type="text" id="addr" placeholder="例:大阪市、東京都新宿区、福岡市博多区">
+
+    <button id="go">吉方位を調べる</button>
+  </div>
+
+  <div class="card" id="result">
+    <div style="text-align:center;">
+      あなたの本命星は
+      <div class="star-badge" id="starName">-</div>
+    </div>
+    <div id="map"></div>
+    <div class="legend">
+      <span><span class="dot" style="background:#4a9d6e"></span>2026年の吉方位</span>
+      <span><span class="dot" style="background:#999"></span>それ以外・凶方位</span>
+    </div>
+    <table class="dir-table">
+      <thead><tr><th>方位</th><th>北</th><th>北東</th><th>東</th><th>南東</th><th>南</th><th>南西</th><th>西</th><th>北西</th></tr></thead>
+      <tbody><tr><td>2026年</td><td id="d-北">-</td><td id="d-北東">-</td><td id="d-東">-</td><td id="d-南東">-</td><td id="d-南">-</td><td id="d-南西">-</td><td id="d-西">-</td><td id="d-北西">-</td></tr></tbody>
+    </table>
+    <p class="note">本命星は立春(2/4頃)を基準に計算しています。1月1日から2月3日生まれの方は前年扱いです。2026年は一白水星が中宮に入る年のため、北(暗剣殺)・南(五黄殺)は全ての本命星にとって共通の凶方位です。この診断はエンタメ目的の簡易版です。</p>
+    <a class="line-cta" href="https://line.me/R/ti/p/@257gzsck" target="_blank" rel="noopener">
+      LINE公式を友だち追加して「旅行」と送る
+      <span>あなたの吉方位にぴったりの旅行先を診断でお届け</span>
+    </a>
+  </div>
+</div>
+
+<script>
+const KIPPOUI_2026 = {
+  "一白水星": ["北東","南西","西"],
+  "二黒土星": ["東","南西"],
+  "三碧木星": ["北東","南東"],
+  "四緑木星": ["南東","西"],
+  "五黄土星": ["東","南東","南西","北西"],
+  "六白金星": ["東","南西","北西"],
+  "七赤金星": ["東","北西"],
+  "八白土星": ["南東","南西","北西"],
+  "九紫火星": ["北東","東","西"]
+};
+function calcHonmeisei(dateStr){
+  let parts = dateStr.split("-").map(Number);
+  let y = parts[0]; let m = parts[1]; let d = parts[2];
+  if(m===1 || (m===2 && d<=3)) y -= 1;
+  let digits = String(y).split("").map(Number);
+  let sum = digits.reduce(function(a,b){return a+b;},0);
+  while(sum>9){ sum = String(sum).split("").map(Number).reduce(function(a,b){return a+b;},0); }
+  let n = 11 - sum;
+  if(n<=0) n += 9;
+  if(n>9) n -= 9;
+  const table = {1:"一白水星",2:"二黒土星",3:"三碧木星",4:"四緑木星",5:"五黄土星",6:"六白金星",7:"七赤金星",8:"八白土星",9:"九紫火星"};
+  return table[n];
+}
+
+const DIRS = ["北","北東","東","南東","南","南西","西","北西"];
+const DIR_ANGLE = {"北":0,"北東":45,"東":90,"南東":135,"南":180,"南西":225,"西":270,"北西":315};
+
+let map, markerLayer, sectorLayers=[];
+
+function drawSectors(lat, lng, goodDirs){
+  if(!map){
+    map = L.map('map').setView([lat,lng], 8);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: 'OpenStreetMap contributors'
+    }).addTo(map);
+  } else {
+    map.setView([lat,lng], 8);
+  }
+  sectorLayers.forEach(function(l){map.removeLayer(l);});
+  sectorLayers = [];
+  if(markerLayer) map.removeLayer(markerLayer);
+  markerLayer = L.marker([lat,lng]).addTo(map);
+
+  const R = 2.2;
+  DIRS.forEach(function(dir){
+    const center = DIR_ANGLE[dir];
+    const a1 = (center-22.5-90) * Math.PI/180;
+    const a2 = (center+22.5-90) * Math.PI/180;
+    const points = [[lat,lng]];
+    for(let t=0;t<=10;t++){
+      const a = a1 + (a2-a1)*t/10;
+      points.push([lat + R*Math.sin(a), lng + R*Math.cos(a)/Math.cos(lat*Math.PI/180)]);
+    }
+    points.push([lat,lng]);
+    const isGood = goodDirs.indexOf(dir) !== -1;
+    const poly = L.polygon(points, {
+      color: isGood ? '#4a9d6e' : '#999',
+      fillColor: isGood ? '#4a9d6e' : '#bbb',
+      fillOpacity: isGood ? 0.45 : 0.15,
+      weight: 1
+    }).addTo(map);
+    sectorLayers.push(poly);
+  });
+}
+
+function geocode(addr){
+  const url = "https://nominatim.openstreetmap.org/search?format=json&limit=1&accept-language=ja&q=" + encodeURIComponent(addr + ", Japan");
+  return fetch(url).then(function(res){return res.json();}).then(function(data){
+    if(data.length===0) return null;
+    return {lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon)};
+  });
+}
+
+document.getElementById('go').addEventListener('click', function(){
+  const birth = document.getElementById('birth').value;
+  const addr = document.getElementById('addr').value.trim();
+  if(!birth || !addr){ alert('生年月日と場所を入力してください'); return; }
+  const btn = document.getElementById('go');
+  btn.textContent = '計算中...';
+  btn.disabled = true;
+
+  const star = calcHonmeisei(birth);
+  const goodDirs = KIPPOUI_2026[star];
+
+  geocode(addr).then(function(loc){
+    btn.textContent = '吉方位を調べる';
+    btn.disabled = false;
+    if(!loc){ alert('場所が見つかりませんでした。市区町村名で入力し直してみてください。'); return; }
+
+    document.getElementById('result').style.display = 'block';
+    document.getElementById('starName').textContent = star;
+    DIRS.forEach(function(d){
+      const cell = document.getElementById('d-'+d);
+      const isGood = goodDirs.indexOf(d) !== -1;
+      cell.textContent = isGood ? '◎' : ((d==='北'||d==='南') ? '凶' : '-');
+      cell.className = isGood ? 'good' : 'bad';
+    });
+    drawSectors(loc.lat, loc.lng, goodDirs);
+    document.getElementById('result').scrollIntoView({behavior:'smooth'});
+  });
+});
+</script>
+</body>
+</html>
